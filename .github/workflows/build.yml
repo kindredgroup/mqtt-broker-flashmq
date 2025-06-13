@@ -13,7 +13,7 @@ jobs:
       # docker buildx is used to build multi-platform images with Dockerfile
       - name: Set up Docker Buildx
         run: |
-          docker buildx -f Dockerfile . --platform linux/amd64 -t ghcr.io/${{github.repository}}:${{github.sha}} -t ghcr.io/${{github.repository}}:latest
+          docker build -f Dockerfile . -t ghcr.io/${{github.repository}}:${{github.sha}} -t ghcr.io/${{github.repository}}:latest
       
 
      
