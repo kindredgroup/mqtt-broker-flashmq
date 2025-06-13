@@ -1,0 +1,32 @@
+name: GHCR Publish
+
+# when a new release is created or new tag is pushed to master
+# tag should be in the format v1.0.0
+# regex to check the tag format
+on:
+  push:
+    tags:
+        - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    if: needs.build.result == 'success'
+    steps:
+        - name: Checkout the repo
+          uses: actions/checkout@v3
+        - name: Login to GitHub Container Registry
+          uses: docker/login-action@v1
+          with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+        - name: Build and publish mqtt-broker-flashmq image with ver and latest tag
+          run: sh scripts/ghcr-publish.sh mqtt-broker-flashmq mqtt-broker-flashmq
+   
