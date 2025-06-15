@@ -5,8 +5,17 @@ name: GHCR Publish
 # regex to check the tag format
 on:
   push:
+    # only run on tags that match the regex
     tags:
         - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch: # allows manual triggering of the workflow
+    # this allows the workflow to be triggered manually from the GitHub UI
+    inputs:
+      tag:
+        description: 'Tag to publish'
+        required: true
+        default: 'latest' # default tag if not provided
+        type: string
 
 jobs:
   build:
@@ -14,19 +23,19 @@ jobs:
     steps:
       - name: Checkout the repo
         uses: actions/checkout@v3
-  publish:
-    runs-on: ubuntu-latest
-    needs: build
-    if: needs.build.result == 'success'
-    steps:
-        - name: Checkout the repo
-          uses: actions/checkout@v3
-        - name: Login to GitHub Container Registry
-          uses: docker/login-action@v1
-          with:
-            registry: ghcr.io
-            username: ${{ github.actor }}
-            password: ${{ secrets.GITHUB_TOKEN }}
-        - name: Build and publish mqtt-broker-flashmq image with ver and latest tag
-          run: sh scripts/ghcr-publish.sh mqtt-broker-flashmq mqtt-broker-flashmq
+  # publish:
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   if: needs.build.result == 'success'
+  #   steps:
+  #       - name: Checkout the repo
+  #         uses: actions/checkout@v3
+  #       - name: Login to GitHub Container Registry
+  #         uses: docker/login-action@v1
+  #         with:
+  #           registry: ghcr.io
+  #           username: ${{ github.actor }}
+  #           password: ${{ secrets.GITHUB_TOKEN }}
+  #       - name: Build and publish mqtt-broker-flashmq image with ver and latest tag
+  #         run: sh scripts/ghcr-publish.sh mqtt-broker-flashmq mqtt-broker-flashmq
    
