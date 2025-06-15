@@ -37,5 +37,8 @@ jobs:
             username: ${{ github.actor }}
             password: ${{ secrets.GITHUB_TOKEN }}
         - name: Build and publish mqtt-broker-flashmq image with ver and latest tag
-          run: sh scripts/ghcr-publish.sh mqtt-broker-flashmq mqtt-broker-flashmq
+          run: |
+            # echo working directory
+            echo "Current working directory: $(pwd)"
+            sh scripts/ghcr-publish.sh mqtt-broker-flashmq mqtt-broker-flashmq:${{ github.ref_name }}
    
