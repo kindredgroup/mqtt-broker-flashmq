@@ -12,4 +12,14 @@ and install gdb debug servers in the container</br>
 ![Debug server](./images/debug-server.png)</br>
 Once the container is running launch your favourite editors debug launch config
 
+## Flash Config
+If `allow_anonymous:false` then the plugin will expect `username` field to be not NULL and automatically authenticate.
+Thus `plugin` config is not be required to be mentioned as its already loaded the config from the correct path. Make sure if its mentioned the the path is `etc/flashmq/libplugin_libcurl.so` to use the plugin built with `mqtt-broker-flashmq` image.
+The docker image places the custom Auth plugin at path  `etc/flashmq/libplugin_libcurl.so` and container will point to the plugin using the config from the image. 
+
+
+|ENV VARS| default|
+|---------|--------|
+| AUTH_PUBLICKEY| undefined|
+
 
