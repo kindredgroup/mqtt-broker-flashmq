@@ -7,6 +7,6 @@ if [ -z "$tag" ]; then
 fi
 tag_ref=ghcr.io/kindredgroup/mqtt-broker-flashmq/$tag
 echo "Building and publishing image with tag: $tag_ref"
-docker build -f ../../Dockerfile . --tag $tag_ref --platform linux/amd64
+docker build -f Dockerfile . --tag $tag_ref
 #for ghcr.io access token mentioned in the github secrets and accessed in actions
 docker push $tag_ref
