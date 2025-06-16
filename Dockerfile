@@ -39,8 +39,9 @@ RUN if [ -d /app/flashmq/auth-plugin ]; then echo "auth-plugin directory copied 
 RUN if [ -f /app/flashmq/auth-plugin/build.sh ]; then echo "build.sh found"; else echo "build.sh not found, exiting"; exit 1; fi
 RUN ./auth-plugin/build.sh
 # check if the build was successful
+RUN mkdir -p /etc/flashmq
 RUN if [ -f /app/flashmq/build-plugin-libcurl-Release/libplugin_libcurl.so ]; then echo "libplugin_libcurl.so found, copying to /app/flashmq"; else echo "libplugin_libcurl.so not found, exiting"; exit 1; fi
-RUN cp /app/flashmq/build-plugin-libcurl-Release/libplugin_libcurl.so /app/flashmq/libplugin_libcurl.so
+RUN cp /app/flashmq/build-plugin-libcurl-Release/libplugin_libcurl.so /etc/flashmq/libplugin_libcurl.so
 
 
 # Clone the FlashMQ repository
