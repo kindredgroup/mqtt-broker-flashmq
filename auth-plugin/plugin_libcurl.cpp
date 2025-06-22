@@ -193,7 +193,7 @@ AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clie
     (void)username;
     (void)password;
 
-    flashmq_logf(LOG_INFO, "username: %s, password: %s", username.c_str(), password.c_str());
+    flashmq_logf(LOG_INFO, "username: %s", username.c_str());
 
     for (const auto &grant : {Allowed_Access::playbook, Allowed_Access::sportsClient,
         Allowed_Access::bettingClient, Allowed_Access::pump})

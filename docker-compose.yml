@@ -1,26 +1,26 @@
 services:
-  # flashmq-local: 
-  #   build: .
-  #   environment: #example of environment variables from jwt-cpp and jwt.io
-  #     # - AUTH_PUBLICKEY=LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF1R2JYV2lLM2RRVHlDYlg1eGRFNAp5Q3VZcDBBRjJkMTVRcTFKU1hUL2x4OENFY1hiOVJiRGRkbDhqR0R2K3NwaTVxUGE4cUVIaUs3RndWMktwUkU5Cjgzd0dQbllzQW05QnhMRmI0WXJMWWNERk9JR1VMdWsyRnRyUFM1MTJRZWExYlhBU3V2WVhFcFFOcEdiblRHVnMKV1hJOUMreWpIenRxeUwyaDhQNm1sVGhQWTlFOXVlMmZDcWRnaXhmVEZJRjlEbTRTTEhicGhVUzJpdzd3MUpnVAo2OXM3b2Y5K0k5bDVsc0o5Y296ZjFyeHJYWDRWMXUvU290VXVOQjNGcDhvQjRDMWZMQkVoU2xNY1VKaXJ6MUU4CkF6aU1DeFMrVnJSUERNK3pmdnBJSmczSmxqQWgzUEpIRGlMdTkwMnY5dytJcGx1MVd5b0IyYVBmaXR4RWhSTjAKWXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t
-  #     # - AUTH_PUBLICKEY=LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF1MVNVMUxmVkxQSENvek14SDJNbwo0bGdPRWVQek5tMHRSZ2VMZXpWNmZmQXQwZ3VuVlRMdzdvbkxSbnJxMC9Jelc3eVdSN1Frcm1CTDdqVEtFbjV1CitxS2hid0tmQnN0SXMrYk1ZMlprcDE4Z25UeEtMeG9TMnRGY3pHa1BMUGdpenNrdWVtTWdoUm5pV2FvTGN5ZWgKa2QzcXFHRWx2Vy9WREw1QWFXVGcwbkxWa2pSbzl6KzQwUlF6dVZhRThBa0FGbXhaem93M3grVkpZS2RqeWtrSgowaVQ5d0NTMERSVFh1MjY5VjI2NFZmLzNqdnJlZFppS1JrZ3dsTDl4TkF3eFhGZzB4L1hGdzAwNVVXVlJJa2RnCmNLV1RqcEJQMmRQd1ZaNFdXQys5YUdWZCtHeW4xbzBDTGVsZjRyRWpHb1hiQUFFZ0FxZUdVeHJjSWxialhmYmMKbXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t
-  #   develop:
-  #     watch: # works only with `docker compose up --build --watch` when there no compilation 
-  #       - action: rebuild
-  #         path: .
-  #       - action: rebuild
-  #         path: ./auth-plugin/
-  #   ports: 
-  #     - "1883:1883"
-  #   # mounts: # persisting configuration shared between host and container
-  #   #   - type: bind
-  #   #     source: ./flashmq.conf
-  #   #     target: /etc/flashmq/flashmq.conf
-  #   volumes: # persisting data generated and used by container
-  #     - ./flashmq.conf:/etc/flashmq/flashmq.conf
-  #     - ./logs:/var/log/flashmq
-  #     - .:/app/flashmq/FlashMQ
-  flashmq-local: 
+  flashmq-local-rebuild: 
+    build: .
+    environment: #example of environment variables from jwt-cpp and jwt.io
+      # - AUTH_PUBLICKEY=LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF1R2JYV2lLM2RRVHlDYlg1eGRFNAp5Q3VZcDBBRjJkMTVRcTFKU1hUL2x4OENFY1hiOVJiRGRkbDhqR0R2K3NwaTVxUGE4cUVIaUs3RndWMktwUkU5Cjgzd0dQbllzQW05QnhMRmI0WXJMWWNERk9JR1VMdWsyRnRyUFM1MTJRZWExYlhBU3V2WVhFcFFOcEdiblRHVnMKV1hJOUMreWpIenRxeUwyaDhQNm1sVGhQWTlFOXVlMmZDcWRnaXhmVEZJRjlEbTRTTEhicGhVUzJpdzd3MUpnVAo2OXM3b2Y5K0k5bDVsc0o5Y296ZjFyeHJYWDRWMXUvU290VXVOQjNGcDhvQjRDMWZMQkVoU2xNY1VKaXJ6MUU4CkF6aU1DeFMrVnJSUERNK3pmdnBJSmczSmxqQWgzUEpIRGlMdTkwMnY5dytJcGx1MVd5b0IyYVBmaXR4RWhSTjAKWXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t
+      # - AUTH_PUBLICKEY=LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF1MVNVMUxmVkxQSENvek14SDJNbwo0bGdPRWVQek5tMHRSZ2VMZXpWNmZmQXQwZ3VuVlRMdzdvbkxSbnJxMC9Jelc3eVdSN1Frcm1CTDdqVEtFbjV1CitxS2hid0tmQnN0SXMrYk1ZMlprcDE4Z25UeEtMeG9TMnRGY3pHa1BMUGdpenNrdWVtTWdoUm5pV2FvTGN5ZWgKa2QzcXFHRWx2Vy9WREw1QWFXVGcwbkxWa2pSbzl6KzQwUlF6dVZhRThBa0FGbXhaem93M3grVkpZS2RqeWtrSgowaVQ5d0NTMERSVFh1MjY5VjI2NFZmLzNqdnJlZFppS1JrZ3dsTDl4TkF3eFhGZzB4L1hGdzAwNVVXVlJJa2RnCmNLV1RqcEJQMmRQd1ZaNFdXQys5YUdWZCtHeW4xbzBDTGVsZjRyRWpHb1hiQUFFZ0FxZUdVeHJjSWxialhmYmMKbXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t
+    develop:
+      watch: # works only with `docker compose up --build --watch` when there no compilation 
+        - action: rebuild
+          path: .
+        - action: rebuild
+          path: ./auth-plugin/
+    ports: 
+      - "1883:1883"
+    # mounts: # persisting configuration shared between host and container
+    #   - type: bind
+    #     source: ./flashmq.conf
+    #     target: /etc/flashmq/flashmq.conf
+    volumes: # persisting data generated and used by container
+      - ./flashmq.conf:/etc/flashmq/flashmq.conf
+      - ./logs:/var/log/flashmq
+      - .:/app/flashmq/FlashMQ
+  flashmq-local-image: 
     image: flashmq-test
     ports: 
       - "1883:1883"
