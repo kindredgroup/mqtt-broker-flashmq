@@ -136,28 +136,16 @@ void flashmq_plugin_poll_event_received(void *thread_data, int fd, uint32_t even
 
 
 
-enum class Allowed_Access {
-	playbook,
-	bettingClient,
-	sportsClient,
-	pump,
-};
 
-bool allow_user_access(const std::string &username)
-{
-	const std::map<Allowed_Access, std::string> allowmap = {
-		{Allowed_Access::playbook, "playbook"},
-		{Allowed_Access::sportsClient, "sports-client"},
-		{Allowed_Access::bettingClient, "anonymous-betting-client"},
-		{Allowed_Access::pump, "pump"},
-	};
+bool allow_user_access(const std::string &username) {
+    const std::vector<std::string> allowed_users = {
+        "playbook",
+        "sports-client",
+        "anonymous-betting-client",
+        "pump"
+    };
 
-	for (const auto &kv : allowmap) {
-		if (kv.second == username) {
-			return true;
-		}
-	}
-	return false;
+    return std::find(allowed_users.begin(), allowed_users.end(), username) != allowed_users.end();
 }
 
 std::string get_env_var( std::string const & key )
@@ -246,6 +234,7 @@ AuthResult flashmq_plugin_acl_check(void *thread_data, const AclAccess access, c
     (void)thread_data;
     (void)access;
     (void)clientid;
+    (void)username;
     (void)subtopics;
     (void)qos;
     (void)(retain);
