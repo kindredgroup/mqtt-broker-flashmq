@@ -136,26 +136,16 @@ void flashmq_plugin_poll_event_received(void *thread_data, int fd, uint32_t even
 
 
 
-enum class Allowed_Access {
-    playbook,
-    bettingClient,
-    sportsClient,
-    pump,
-};
 
-std::map<Allowed_Access, std::string> allowed_user_access_map = {
-    {Allowed_Access::playbook, "playbook"},
-    {Allowed_Access::sportsClient, "sports-client"},
-    {Allowed_Access::bettingClient, "anonymous-betting-client"},
-    {Allowed_Access::pump, "pump"},
-};
+bool allow_user_access(const std::string &username) {
+    const std::vector<std::string> allowed_users = {
+        "playbook",
+        "sports-client",
+        "anonymous-betting-client",
+        "pump"
+    };
 
-std::string allowed_user_access_check(Allowed_Access username) {
-    auto it = allowed_user_access_map.find(username);
-    if (it != allowed_user_access_map.end()) {
-        return it->second;
-    }
-    return "Unknown"; // Handle invalid enum values
+    return std::find(allowed_users.begin(), allowed_users.end(), username) != allowed_users.end();
 }
 
 std::string get_env_var( std::string const & key )
@@ -184,31 +174,26 @@ std::string base64_decode(const std::string &in) {
     BIO_free_all(bio);
     return out;
 }
+
 AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clientid, const std::string &username, const std::string &password,
                                       const std::vector<std::pair<std::string, std::string>> *userProperties, const std::weak_ptr<Client> &client)
 {
     (void)clientid;
     (void)userProperties;
     (void)client;
-    (void)username;
-    (void)password;
+
 
     flashmq_logf(LOG_INFO, "username: %s", username.c_str());
 
-    for (const auto &grant : {Allowed_Access::playbook, Allowed_Access::sportsClient,
-        Allowed_Access::bettingClient, Allowed_Access::pump})
-    {
-        if (username == allowed_user_access_check(grant))
-        {
-         return AuthResult::success;
-        }
+    if (allow_user_access(username)){
+        return AuthResult::success;
     }
     
     // base64 decode the environment variable AUTH_PUBLICKEY
     const std::string rsa_pub_env_key = get_env_var("AUTH_PUBLICKEY");
     const std::string rsa_pub_key = base64_decode(rsa_pub_env_key);
 
-    const std::string token = username; // In a real application, you would get the token from the username or password field.
+    const std::string token = password;
     if (token.empty())
     {
         flashmq_logf(LOG_ERR, "No token found for username: %s", username.c_str());
@@ -222,19 +207,11 @@ AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clie
         auto verify = jwt::verify()
                         // We only need an RSA public key to verify tokens
                         .allow_algorithm(jwt::algorithm::rs256(rsa_pub_key, "", "", ""));
-        /* [allow rsa algorithm] */
-
-        // Decode the JWT token
         /* [decode jwt token] */
-        auto decoded = jwt::decode(username);
+        auto decoded = jwt::decode(token);
         flashmq_logf(LOG_INFO, "Decoded JWT token successfully");
         verify.verify(decoded);
         flashmq_logf(LOG_INFO, "Verified JWT token successfully with public key");
-            // for (auto& e : decoded.get_header_json())
-            //     std::cout << e.first << " = " << e.second << '\n';
-            // for (auto& e : decoded.get_payload_json())
-            //     std::cout << e.first << " = " << e.second << '\n';
-
         
         return AuthResult::success;
     } catch (const std::exception &e) {
@@ -249,8 +226,10 @@ AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clie
 }
 
 AuthResult flashmq_plugin_acl_check(void *thread_data, const AclAccess access, const std::string &clientid, const std::string &username,
-                                    const std::string &topic, const std::vector<std::string> &subtopics, std::string_view payload, const uint8_t qos,
-                                    const bool retain, const std::vector<std::pair<std::string, std::string>> *userProperties)
+                                               const std::string &topic, const std::vector<std::string> &subtopics, const std::string &shareName,
+                                               std::string_view payload, const uint8_t qos, const bool retain,
+                                               const std::optional<std::string> &correlationData, const std::optional<std::string> &responseTopic,
+                                               const std::vector<std::pair<std::string, std::string>> *userProperties)
 {
     (void)thread_data;
     (void)access;
@@ -262,6 +241,9 @@ AuthResult flashmq_plugin_acl_check(void *thread_data, const AclAccess access, c
     (void)userProperties;
     (void)topic;
     (void)payload;
+    (void)shareName;
+    (void)correlationData;
+    (void)responseTopic;
 
     return AuthResult::success;
 }
