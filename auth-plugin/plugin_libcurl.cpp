@@ -32,7 +32,7 @@ For more information, please refer to <http://unlicense.org/>
 #include <sys/epoll.h>
 #include <stdexcept>
 #include <map>
-
+#include <chrono>
 
 #include "pluginstate.h"
 #include "curl_functions.h"
@@ -41,9 +41,26 @@ For more information, please refer to <http://unlicense.org/>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <string>
-// include jwt-cpp
+#include "parallel_hashmap/phmap.h"
 #include "jwt-cpp/jwt.h"
+#include <shared_mutex>
 
+/* 
+ * creates a p hashmap with 4 shards with shared mutex so read/write is thread safe. Read is lock free.
+ * this is a global variable, so it is shared between all threads because acl check can happen in any thread.
+ * 2**4 = 16 sub maps, so lock is applied to sub map so concurrency is intrinsinc to the map.
+ */
+const int SHARDS = 4;
+using TokenCache = phmap::parallel_flat_hash_map<
+    std::string,
+    long long,
+    phmap::priv::hash_default_hash<std::string>,
+    phmap::priv::hash_default_eq<std::string>,
+    phmap::priv::Allocator<phmap::priv::Pair<const std::string, long long>>,
+    SHARDS,
+    std::shared_mutex>;
+
+static TokenCache token_expiry_cache;
 
 int flashmq_plugin_version()
 {
@@ -63,6 +80,8 @@ void flashmq_plugin_main_deinit(std::unordered_map<std::string, std::string> &pl
     (void)plugin_opts;
 
     curl_global_cleanup();
+    token_expiry_cache.clear();
+
 }
 // new text test
 void flashmq_plugin_allocate_thread_memory(void **thread_data, std::unordered_map<std::string, std::string> &plugin_opts)
@@ -136,7 +155,6 @@ void flashmq_plugin_poll_event_received(void *thread_data, int fd, uint32_t even
 
 
 
-
 bool allow_user_access(const std::string &username) {
     const std::vector<std::string> allowed_users = {
         "playbook",
@@ -148,9 +166,8 @@ bool allow_user_access(const std::string &username) {
     return std::find(allowed_users.begin(), allowed_users.end(), username) != allowed_users.end();
 }
 
-std::string get_env_var( std::string const & key )
-{
-    char * val = getenv( key.c_str() );
+std::string get_env_var(std::string const &key) {
+    char *val = getenv(key.c_str());
     return val == NULL ? std::string("") : std::string(val);
 }
 
@@ -168,12 +185,22 @@ std::string base64_decode(const std::string &in) {
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
 
     int len = BIO_read(bio, &out[0], (int)in.length());
-    if (len > 0) out.resize(len);
-    else out.clear();
+    if (len > 0)
+        out.resize(len);
+    else
+        out.clear();
 
     BIO_free_all(bio);
     return out;
 }
+
+
+void flashmq_plugin_client_disconnected(void *thread_data, const std::string &clientid){
+    (void)thread_data;
+    // erase is thread safe as it acquires write lock on the shard.
+    token_expiry_cache.erase(clientid);   
+}
+
 
 AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clientid, const std::string &username, const std::string &password,
                                       const std::vector<std::pair<std::string, std::string>> *userProperties, const std::weak_ptr<Client> &client)
@@ -181,14 +208,15 @@ AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clie
     (void)clientid;
     (void)userProperties;
     (void)client;
-
+    (void)thread_data;
 
     flashmq_logf(LOG_INFO, "username: %s", username.c_str());
 
-    if (allow_user_access(username)){
+    if (allow_user_access(username))
+    {
         return AuthResult::success;
     }
-    
+
     // base64 decode the environment variable AUTH_PUBLICKEY
     const std::string rsa_pub_env_key = get_env_var("AUTH_PUBLICKEY");
     const std::string rsa_pub_key = base64_decode(rsa_pub_env_key);
@@ -199,25 +227,30 @@ AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clie
         flashmq_logf(LOG_ERR, "No token found for username: %s", username.c_str());
         return AuthResult::error;
     }
-    
-    
+
     // decode the username and password, if they are jwt tokens, and check if they are valid.
-    try{
+    try {
         /* [allow rsa algorithm] */
-        auto verify = jwt::verify()
-                        // We only need an RSA public key to verify tokens
-                        .allow_algorithm(jwt::algorithm::rs256(rsa_pub_key, "", "", ""));
+        auto jwt_verify = jwt::verify()
+                          .allow_algorithm(jwt::algorithm::rs256(rsa_pub_key, "", "", ""));
         /* [decode jwt token] */
         auto decoded = jwt::decode(token);
-        flashmq_logf(LOG_INFO, "Decoded JWT token successfully");
-        verify.verify(decoded);
+        jwt_verify.verify(decoded);
+        long long exp_epoch = decoded.get_payload_claim("exp").to_json().get<int64_t>();
+        /* 
+         * upserts the cache with the clientid and the exp_epoch.
+         * thread safe write with try_emplace_l as it acquires write lock on the shard (sub maps). Lock is specific to the sub map
+         */
+        token_expiry_cache.try_emplace_l(
+            clientid,
+            [&](auto& kv) { kv.second = exp_epoch; }, 
+            exp_epoch  // construct if missing
+        );
         flashmq_logf(LOG_INFO, "Verified JWT token successfully with public key");
-        
         return AuthResult::success;
     } catch (const std::exception &e) {
         flashmq_logf(LOG_ERR, "Failed to decode JWT token: %s", e.what());
         std::cout << "Caught exception: " << e.what() << std::endl;
-        // print the exception message
         return AuthResult::error;
     }
 
@@ -226,15 +259,14 @@ AuthResult flashmq_plugin_login_check(void *thread_data, const std::string &clie
 }
 
 AuthResult flashmq_plugin_acl_check(void *thread_data, const AclAccess access, const std::string &clientid, const std::string &username,
-                                               const std::string &topic, const std::vector<std::string> &subtopics, const std::string &shareName,
-                                               std::string_view payload, const uint8_t qos, const bool retain,
-                                               const std::optional<std::string> &correlationData, const std::optional<std::string> &responseTopic,
-                                               const std::vector<std::pair<std::string, std::string>> *userProperties)
+                                    const std::string &topic, const std::vector<std::string> &subtopics, const std::string &shareName,
+                                    std::string_view payload, const uint8_t qos, const bool retain,
+                                    const std::optional<std::string> &correlationData, const std::optional<std::string> &responseTopic,
+                                    const std::vector<std::pair<std::string, std::string>> *userProperties)
 {
     (void)thread_data;
     (void)access;
     (void)clientid;
-    (void)username;
     (void)subtopics;
     (void)qos;
     (void)(retain);
@@ -245,6 +277,38 @@ AuthResult flashmq_plugin_acl_check(void *thread_data, const AclAccess access, c
     (void)correlationData;
     (void)responseTopic;
 
-    return AuthResult::success;
-}
+    // SYS topics are published every 10 seconds, this allow broker internal $SYS topics to be published
+    bool is_broker_internal_topic = (username.empty() && clientid.empty()) && topic.rfind("$SYS", 0) == 0 && access == AclAccess::write;
+    bool is_allowed_user = allow_user_access(username);
+    if (is_broker_internal_topic || is_allowed_user)
+    {
+        return AuthResult::success;
+    }
+ 
+    long long exp_epoch = 0;
+    // thread safe read with if_contains
+    bool cache_hit = token_expiry_cache.if_contains(clientid, [&](const TokenCache::value_type &kv) {
+        exp_epoch = kv.second;
+    });
 
+
+
+    if (cache_hit)
+    {
+        flashmq_logf(LOG_DEBUG, "JWT verification cache hit for user: %s and exp: %lld", username.c_str(), exp_epoch);
+        // jwt expiry is in epoch seconds
+        long long now_epoch = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+
+        bool token_expired = now_epoch > exp_epoch;
+        if(token_expired){
+            flashmq_logf(LOG_DEBUG, "JWT verification cache expired for user: %s", username.c_str());
+            token_expiry_cache.erase(clientid);
+            return AuthResult::acl_denied;
+        }
+
+        return AuthResult::success;
+    }
+
+    return AuthResult::acl_denied;
+}
